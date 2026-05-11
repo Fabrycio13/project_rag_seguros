@@ -112,6 +112,7 @@ export default function AppLayout() {
   }, []);
   
   // Custom Modal States
+  const [selectedNote, setSelectedNote] = useState<string | null>(null);
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -127,6 +128,22 @@ export default function AppLayout() {
     confirmText: "Confirmar",
     onConfirm: () => {}
   });
+
+  const handleViewFile = async (doc: any) => {
+    if (!doc.source_uri) return;
+    try {
+      const { data, error } = await supabase.storage
+        .from("documents")
+        .createSignedUrl(doc.source_uri, 60);
+      
+      if (error) throw error;
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, "_blank");
+      }
+    } catch (err: any) {
+      alert("Erro ao abrir arquivo: " + err.message);
+    }
+  };
 
   const closeModal = () => setModalConfig(prev => ({ ...prev, isOpen: false }));
 
@@ -502,6 +519,7 @@ export default function AppLayout() {
           >
             <LogOut size={18} className="shrink-0" />
             {isSidebarOpen && <span>Sair</span>}
+          </button>
         </div>
       </aside>
 
@@ -603,11 +621,30 @@ export default function AppLayout() {
                     {documents.map(doc => (
                       <div key={doc.id} className={`bg-zinc-900/50 border border-zinc-800/60 p-4 rounded-xl flex flex-col gap-3 ${!doc.is_active ? "opacity-50 grayscale" : ""}`}>
                         <div className="flex items-start gap-3">
-                          <div className={`w-10 h-10 shrink-0 rounded-lg flex items-center justify-center bg-blue-500/10 text-blue-400`}>
-                            <FileText size={20} />
-                          </div>
+                          {doc.source_uri ? (
+                            <button 
+                              onClick={() => handleViewFile(doc)}
+                              className="w-10 h-10 shrink-0 rounded-lg flex items-center justify-center bg-blue-500/10 text-blue-400 active:bg-blue-500/20"
+                            >
+                              <FileText size={20} />
+                            </button>
+                          ) : (
+                            <div className="w-10 h-10 shrink-0 rounded-lg flex items-center justify-center bg-blue-500/10 text-blue-400">
+                              <FileText size={20} />
+                            </div>
+                          )}
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-zinc-200 truncate" title={doc.name}>{doc.name}</h3>
+                            {doc.source_uri ? (
+                              <button 
+                                onClick={() => handleViewFile(doc)}
+                                className="block font-medium text-zinc-200 truncate active:text-blue-400 transition-colors text-left w-full"
+                                title={doc.name}
+                              >
+                                {doc.name}
+                              </button>
+                            ) : (
+                              <h3 className="font-medium text-zinc-200 truncate" title={doc.name}>{doc.name}</h3>
+                            )}
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-[10px] text-zinc-500 font-medium">{doc.added}</span>
                               <span className="text-zinc-700 text-[10px]">•</span>
@@ -625,16 +662,46 @@ export default function AppLayout() {
                           </div>
                         </div>
                         
-                        <div className="flex items-center justify-between border-t border-zinc-800/40 pt-3">
-                           <div className="flex items-center gap-1">
-                              {doc.source_uri && (
-                                <a href={`https://lmoxcjndvhnxihtvnavs.supabase.co/storage/v1/object/public/documents/${doc.source_uri}`} target="_blank" className="p-2 text-zinc-400 hover:text-blue-400"><Eye size={18} /></a>
+                        <div className="flex items-center justify-between border-t border-zinc-800/40 pt-3 mt-1">
+                           <div className="flex items-center gap-2">
+                              {doc.description && (
+                                <button 
+                                  onClick={() => setSelectedNote(doc.description || null)}
+                                  className="p-2 text-zinc-400 hover:text-purple-400 transition-colors"
+                                  title="Ver Nota"
+                                >
+                                  <MessageSquare size={18} />
+                                </button>
                               )}
-                              <button onClick={() => handleToggleActive(doc.id, !!doc.is_active)} className="p-2 text-zinc-400"><Power size={18} /></button>
+                              {doc.source_uri && (
+                                <button 
+                                  onClick={() => handleViewFile(doc)}
+                                  className="p-2 text-zinc-400 hover:text-blue-400 transition-colors"
+                                  title="Ver Arquivo"
+                                >
+                                  <Eye size={18} />
+                                </button>
+                              )}
+                              <button 
+                                onClick={() => handleToggleActive(doc.id, !!doc.is_active)} 
+                                className={`p-2 transition-colors ${doc.is_active ? 'text-zinc-400 hover:text-yellow-400' : 'text-yellow-500'}`}
+                              >
+                                <Power size={18} />
+                              </button>
                            </div>
-                           <div className="flex items-center gap-1">
-                              <button onClick={() => handleReprocess(doc.id)} className="p-2 text-zinc-400"><RefreshCw size={18} /></button>
-                              <button onClick={() => handleDeleteDocument(doc.id, doc.name)} className="p-2 text-red-400/70"><Trash2 size={18} /></button>
+                           <div className="flex items-center gap-2">
+                              <button 
+                                onClick={() => handleReprocess(doc.id)} 
+                                className="p-2 text-zinc-400 hover:text-emerald-400 transition-colors"
+                              >
+                                <RefreshCw size={18} />
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteDocument(doc.id, doc.name)} 
+                                className="p-2 text-zinc-500 hover:text-red-400 transition-colors"
+                              >
+                                <Trash2 size={18} />
+                              </button>
                            </div>
                         </div>
                       </div>
@@ -660,7 +727,17 @@ export default function AppLayout() {
                                 <div className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center transition-colors ${doc.is_active ? 'bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20' : 'bg-zinc-800 text-zinc-500'}`}>
                                   <FileText size={16} />
                                 </div>
-                                <span className={`font-medium break-words ${!doc.is_active ? 'text-zinc-500 line-through' : 'text-zinc-200'}`} title={doc.name}>{doc.name}</span>
+                                {doc.source_uri ? (
+                                 <button 
+                                   onClick={() => handleViewFile(doc)}
+                                   className={`font-medium break-words hover:text-blue-400 transition-colors text-left ${!doc.is_active ? 'text-zinc-500 line-through' : 'text-zinc-200'}`} 
+                                   title={doc.name}
+                                 >
+                                   {doc.name}
+                                 </button>
+                               ) : (
+                                 <span className={`font-medium break-words ${!doc.is_active ? 'text-zinc-500 line-through' : 'text-zinc-200'}`} title={doc.name}>{doc.name}</span>
+                               )}
                               </div>
                             </td>
                             <td className="py-4 text-center">
@@ -698,32 +775,25 @@ export default function AppLayout() {
                             <td className="py-4 text-zinc-400 text-center">
                               <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 
-                                {/* Description Note Tooltip */}
                                 {doc.description && (
-                                  <div className="relative group/note cursor-help flex items-center justify-center">
-                                    <div className="p-2 text-zinc-500 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors">
-                                      <MessageSquare size={16} />
-                                    </div>
-                                    <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 hidden group-hover/note:block w-56 bg-zinc-800 text-zinc-200 text-xs p-3 rounded-lg shadow-xl border border-zinc-700/80 z-50 normal-case font-normal pointer-events-none text-left">
-                                      <div className="font-semibold text-purple-400 mb-1">Nota</div>
-                                      {doc.description}
-                                      <div className="absolute left-full top-1/2 -translate-y-1/2 -ml-px border-4 border-transparent border-l-zinc-700/80"></div>
-                                      <div className="absolute left-full top-1/2 -translate-y-1/2 -ml-1 border-4 border-transparent border-l-zinc-800"></div>
-                                    </div>
-                                  </div>
+                                  <button 
+                                    onClick={() => setSelectedNote(doc.description || null)}
+                                    className="p-2 text-zinc-500 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors"
+                                    title="Ver Nota"
+                                  >
+                                    <MessageSquare size={16} />
+                                  </button>
                                 )}
   
                                 {/* Open Document */}
                                 {doc.source_uri && (
-                                  <a
-                                    href={`https://lmoxcjndvhnxihtvnavs.supabase.co/storage/v1/object/public/documents/${doc.source_uri}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                  <button
+                                    onClick={() => handleViewFile(doc)}
                                     className="p-2 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
                                     title="Ver Arquivo Original"
                                   >
                                     <Eye size={16} />
-                                  </a>
+                                  </button>
                                 )}
   
                                 {/* Toggle Active */}
@@ -1012,6 +1082,25 @@ export default function AppLayout() {
               >
                 {modalConfig.confirmText}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NOTE MODAL */}
+      {selectedNote !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-lg font-semibold text-zinc-100">Nota do Documento</h3>
+                <button onClick={() => setSelectedNote(null)} className="text-zinc-500 hover:text-zinc-300 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 text-zinc-300 text-sm whitespace-pre-wrap max-h-96 overflow-y-auto">
+                {selectedNote}
+              </div>
             </div>
           </div>
         </div>
