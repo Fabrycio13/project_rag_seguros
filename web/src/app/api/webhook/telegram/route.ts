@@ -180,7 +180,17 @@ export async function POST(req: NextRequest) {
         last_interaction_at: new Date().toISOString()
       }, { onConflict: "platform,chat_id" });
 
-    // 6. Send Response back to Telegram
+    // 6. Log the query
+    await supabase.from("query_logs").insert({
+      tenant_id: tenantId,
+      correlation_id: crypto.randomUUID(),
+      question: userMessage,
+      top_k: 5,
+      contexts_returned: chunks?.length || 0,
+      latency_ms: 0, // Simplified for now
+    });
+
+    // 7. Send Response back to Telegram
     await sendTelegramMessage(chatId, aiResponse);
 
     // Return 200 OK so Telegram knows we received it
