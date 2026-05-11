@@ -17,18 +17,25 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
+    console.log("🚀 Tentando login para:", email);
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("❌ Erro no login:", error.message);
+        throw error;
+      }
 
+      console.log("✅ Login bem-sucedido!", data);
       router.push("/");
       router.refresh();
     } catch (err: any) {
-      setError(err.message || "Erro ao fazer login");
+      console.error("💥 Falha crítica no login:", err);
+      setError(err.message || "Erro ao fazer login. Verifique suas credenciais.");
     } finally {
       setLoading(false);
     }
