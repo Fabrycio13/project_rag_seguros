@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createAdminClient, getUserTenantId } from "@/lib/supabase-server";
 
 export async function DELETE(req: NextRequest) {
+  const supabase = createAdminClient();
   try {
-    const tenantId = process.env.DEFAULT_TENANT_ID;
-    if (!tenantId) {
-      return NextResponse.json({ error: "DEFAULT_TENANT_ID not configured" }, { status: 500 });
-    }
+    const tenantId = await getUserTenantId();
+    if (!tenantId) { return NextResponse.json({ error: "Tenant não encontrado" }, { status: 403 }); }
 
     // 1. Get all documents to find their storage paths
     const { data: docs, error: fetchError } = await supabase

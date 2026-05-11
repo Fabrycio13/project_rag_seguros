@@ -19,8 +19,11 @@ import {
   RefreshCw,
   Power,
   AlertTriangle,
-  X
+  X,
+  LogOut
 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
 type Tab = "dashboard" | "documents";
 
@@ -58,6 +61,7 @@ const formatMessage = (text: string | React.ReactNode) => {
 };
 
 export default function AppLayout() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("documents");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
@@ -363,21 +367,31 @@ export default function AppLayout() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      window.location.href = "/login";
+    } catch (err: any) {
+      console.error("Erro ao sair:", err);
+      alert("Erro ao sair: " + err.message);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-zinc-950 text-zinc-100 font-sans overflow-hidden selection:bg-blue-500/30">
       
       {/* SIDEBAR */}
       <aside className={`border-r border-zinc-800/60 bg-zinc-950 flex flex-col transition-all duration-300 ${isSidebarOpen ? "w-64" : "w-20"}`}>
-        {/* User Profile & Toggle */}
+        {/* Logo & Toggle */}
         <div className="p-5 border-b border-zinc-800/60 flex items-center justify-between">
           {isSidebarOpen && (
-            <div className="flex items-center gap-3 p-2.5 bg-zinc-900/50 hover:bg-zinc-900 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-zinc-800/80 flex-1 overflow-hidden mr-2">
-              <div className="w-9 h-9 bg-zinc-800 flex items-center justify-center rounded-full shadow-sm shrink-0">
-                <User size={18} className="text-zinc-400" />
-              </div>
-              <div className="flex-1 truncate">
-                <div className="text-sm font-medium truncate">Usabit</div>
-              </div>
+            <div className="flex-1 overflow-hidden mr-2 flex items-center">
+              <img 
+                src="/logo_usabit_email.png" 
+                alt="Usabit Logo" 
+                className="h-8 w-auto object-contain"
+              />
             </div>
           )}
           
@@ -421,13 +435,37 @@ export default function AppLayout() {
           </nav>
         </div>
 
-        <div className={`p-4 border-t border-zinc-800/60 flex ${!isSidebarOpen && "justify-center"}`}>
+        <div className={`p-4 border-t border-zinc-800/60 flex flex-col gap-1 ${!isSidebarOpen && "items-center"}`}>
+          {/* User Profile */}
+          {isSidebarOpen ? (
+            <div className="flex items-center gap-3 p-2.5 mb-2 bg-zinc-900/50 hover:bg-zinc-900 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-zinc-800/80 w-full overflow-hidden">
+              <div className="w-9 h-9 bg-zinc-800 flex items-center justify-center rounded-full shadow-sm shrink-0">
+                <User size={18} className="text-zinc-400" />
+              </div>
+              <div className="flex-1 truncate">
+                <div className="text-sm font-medium truncate">Usabit</div>
+              </div>
+            </div>
+          ) : (
+            <div className="w-9 h-9 mb-2 bg-zinc-800 flex items-center justify-center rounded-full shadow-sm shrink-0 cursor-pointer hover:bg-zinc-700 transition-colors" title="Usabit">
+              <User size={18} className="text-zinc-400" />
+            </div>
+          )}
+
           <button 
             className={`flex items-center ${isSidebarOpen ? "justify-start gap-3 px-3" : "justify-center"} text-sm font-medium text-zinc-400 hover:text-zinc-100 transition-colors w-full py-2.5 rounded-lg hover:bg-zinc-900/80`}
             title={!isSidebarOpen ? "Configurações" : undefined}
           >
             <Settings size={18} className="shrink-0" />
             {isSidebarOpen && <span>Configurações</span>}
+          </button>
+          <button 
+            onClick={handleLogout}
+            className={`flex items-center ${isSidebarOpen ? "justify-start gap-3 px-3" : "justify-center"} text-sm font-medium text-red-400/80 hover:text-red-400 transition-colors w-full py-2.5 rounded-lg hover:bg-red-500/10 mt-1`}
+            title={!isSidebarOpen ? "Sair" : undefined}
+          >
+            <LogOut size={18} className="shrink-0" />
+            {isSidebarOpen && <span>Sair</span>}
           </button>
         </div>
       </aside>

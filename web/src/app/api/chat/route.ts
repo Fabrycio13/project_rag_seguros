@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createAdminClient, getUserTenantId } from "@/lib/supabase-server";
 import OpenAI from "openai";
 import { SYSTEM_PROMPT } from "@/lib/prompt";
 
@@ -9,8 +9,13 @@ const openai = new OpenAI({
 
 export async function POST(req: NextRequest) {
   try {
+    const tenantId = await getUserTenantId();
+    if (!tenantId) {
+      return NextResponse.json({ error: "Tenant não encontrado para este usuário." }, { status: 403 });
+    }
+
+    const supabase = createAdminClient();
     const { query, history = [] } = await req.json();
-    const tenantId = process.env.DEFAULT_TENANT_ID;
 
     if (!query) return NextResponse.json({ error: "Missing query" }, { status: 400 });
     if (!tenantId) return NextResponse.json({ error: "DEFAULT_TENANT_ID not configured" }, { status: 500 });
@@ -35,8 +40,9 @@ export async function POST(req: NextRequest) {
     // 2. Search for similar chunks via RPC
     const { data: chunks, error: matchError } = await supabase.rpc("match_embeddings", {
       query_embedding: queryEmbedding,
-      match_threshold: 0.5,
+      match_threshold: 0.3,
       match_count: 5,
+      p_tenant_id: tenantId,
     });
 
     if (matchError) {

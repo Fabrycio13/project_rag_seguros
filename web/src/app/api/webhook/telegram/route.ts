@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
-import OpenAI from "openai";
+import { createAdminClient, getUserTenantId } from "@/lib/supabase-server";
+import OpenAI, { toFile } from "openai";
 import { SYSTEM_PROMPT } from "@/lib/prompt";
 
 const openai = new OpenAI({
@@ -25,22 +25,74 @@ async function sendTelegramMessage(chatId: string | number, text: string) {
 }
 
 export async function POST(req: NextRequest) {
+  const supabase = createAdminClient();
   try {
     const body = await req.json();
+    console.log("Telegram Body:", JSON.stringify(body));
     
-    // Check if it's a valid Telegram message
-    if (!body.message || !body.message.text) {
-      return NextResponse.json({ ok: true }); // Telegram needs a 200 OK
+    const chatId = body.message.chat.id.toString();
+    let userMessage = body.message.text;
+
+    // --- AUDIO SUPPORT (WHISPER) ---
+    const voice = body.message.voice || body.message.audio;
+    if (!userMessage && voice) {
+      console.log("Audio/Voice message detected:", voice.file_id);
+      try {
+        const fileId = voice.file_id;
+        
+        // 1. Get file path from Telegram
+        const fileRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${fileId}`);
+        const fileData = await fileRes.json();
+        
+        if (fileData.ok) {
+          const filePath = fileData.result.file_path;
+          const downloadUrl = `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${filePath}`;
+          console.log("Downloading audio from:", downloadUrl);
+          
+          // 2. Download the audio file
+          const audioRes = await fetch(downloadUrl);
+          if (!audioRes.ok) throw new Error("Failed to download audio from Telegram");
+          
+          const audioBuffer = Buffer.from(await audioRes.arrayBuffer());
+          
+          // 3. Transcribe with OpenAI Whisper
+          // Using a buffer with a filename for compatibility
+          const transcription = await openai.audio.transcriptions.create({
+            file: await toFile(audioBuffer, "voice.ogg", { type: "audio/ogg" }),
+            model: "whisper-1",
+          });
+          
+          userMessage = transcription.text;
+          console.log(`Transcribed text: "${userMessage}"`);
+        } else {
+          console.error("Telegram getFile failed:", fileData);
+        }
+      } catch (err: any) {
+        console.error("Audio transcription failed:", err);
+        await sendTelegramMessage(chatId, "❌ Desculpe, tive um problema ao processar seu áudio.");
+        return NextResponse.json({ ok: true });
+      }
     }
 
-    const chatId = body.message.chat.id.toString();
-    const userMessage = body.message.text;
+    if (!userMessage) {
+      return NextResponse.json({ ok: true }); // Ignore non-text/non-audio messages
+    }
     const tenantId = process.env.DEFAULT_TENANT_ID;
 
     if (!TELEGRAM_BOT_TOKEN) {
       console.error("TELEGRAM_BOT_TOKEN missing in .env");
       return NextResponse.json({ error: "Config missing" }, { status: 500 });
     }
+
+    // Security: Check if chatId is allowed (DISABLED - Bot is now public)
+    /*
+    const allowedIds = (process.env.ALLOWED_TELEGRAM_CHAT_IDS || "").split(",");
+    if (allowedIds.length > 0 && !allowedIds.includes(chatId)) {
+      console.log(`Access restricted for chatId: ${chatId}`);
+      await sendTelegramMessage(chatId, "⚠️ Acesso restrito. Entre em contato com o administrador.");
+      return NextResponse.json({ ok: true });
+    }
+    */
 
     // 1. Fetch Session History from Supabase
     let history: any[] = [];
@@ -67,11 +119,16 @@ export async function POST(req: NextRequest) {
     const queryEmbedding = embResponse.data[0].embedding;
 
     // Vector Search
-    const { data: chunks } = await supabase.rpc("match_embeddings", {
+    const { data: chunks, error: matchError } = await supabase.rpc("match_embeddings", {
       query_embedding: queryEmbedding,
-      match_threshold: 0.5,
+      match_threshold: 0.3,
       match_count: 5,
+      p_tenant_id: tenantId,
     });
+
+    if (matchError) {
+      console.error("Telegram RPC Error:", matchError);
+    }
 
     // Build Context
     let contextText = "";

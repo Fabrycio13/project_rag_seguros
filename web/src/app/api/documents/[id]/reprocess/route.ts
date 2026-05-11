@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createAdminClient, getUserTenantId } from "@/lib/supabase-server";
 import OpenAI from "openai";
 import { chunkTextSmart, cleanChunkText } from "@/lib/chunking";
 
@@ -13,11 +13,12 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> } | any
 ) {
+  const supabase = createAdminClient();
   try {
     const { id: documentId } = await params;
-    const tenantId = process.env.DEFAULT_TENANT_ID;
+    const tenantId = await getUserTenantId();
 
-    if (!tenantId) return NextResponse.json({ error: "DEFAULT_TENANT_ID not configured" }, { status: 500 });
+    if (!tenantId) return NextResponse.json({ error: "Tenant não encontrado" }, { status: 403 });
 
     // 1. Fetch document record
     const { data: docRecord, error: fetchError } = await supabase

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createAdminClient, getUserTenantId } from "@/lib/supabase-server";
 import OpenAI from "openai";
 import { chunkTextSmart, cleanChunkText } from "@/lib/chunking";
 
@@ -16,12 +16,17 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-  export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
+    const tenantId = await getUserTenantId();
+    if (!tenantId) {
+      return NextResponse.json({ error: "Tenant não encontrado para este usuário." }, { status: 403 });
+    }
+
+    const supabase = createAdminClient();
     const formData = await req.formData();
     const file = formData.get("file") as File;
     const description = formData.get("description") as string || "";
-    const tenantId = process.env.DEFAULT_TENANT_ID;
 
     if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
     if (!tenantId) return NextResponse.json({ error: "DEFAULT_TENANT_ID not configured" }, { status: 500 });
