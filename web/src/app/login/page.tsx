@@ -43,37 +43,35 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4 overflow-hidden">
-      {/* Background Effect */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-50">
-        <div style={{ width: '1200px', height: '800px', position: 'relative' }}>
-          <MagicRings
-            color="#A855F7"
-            colorTwo="#6366F1"
-            ringCount={6}
-            speed={1}
-            attenuation={10}
-            lineThickness={2}
-            baseRadius={0.35}
-            radiusStep={0.1}
-            scaleRate={0.1}
-            opacity={1}
-            blur={0}
-            noiseAmount={0.1}
-            rotation={0}
-            ringGap={1.5}
-            fadeIn={0.7}
-            fadeOut={0.5}
-            followMouse={true}
-            mouseInfluence={0.2}
-            hoverScale={1.2}
-            parallax={0.05}
-            clickBurst={false}
-          />
-        </div>
+    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4 overflow-hidden relative">
+      {/* Background Effect - Full Screen */}
+      <div className="absolute inset-0 pointer-events-none">
+        <MagicRings
+          color="#A855F7"
+          colorTwo="#6366F1"
+          ringCount={10}
+          speed={0.8}
+          attenuation={8}
+          lineThickness={2}
+          baseRadius={0.2}
+          radiusStep={0.1}
+          scaleRate={0.15}
+          opacity={0.6}
+          blur={0}
+          noiseAmount={0.05}
+          rotation={45}
+          ringGap={1.8}
+          fadeIn={0.7}
+          fadeOut={0.5}
+          followMouse={true}
+          mouseInfluence={0.1}
+          hoverScale={1.1}
+          parallax={0.03}
+          clickBurst={true}
+        />
       </div>
 
-      <div className="w-full max-w-md z-10">
+      <div className="w-full max-w-md z-10 relative">
         <div className="flex flex-col items-center mb-8 text-center">
           <div className="w-16 h-16 bg-blue-600/10 border border-blue-500/20 rounded-2xl flex items-center justify-center mb-4">
             <ShieldCheck className="text-blue-500 w-8 h-8" />
