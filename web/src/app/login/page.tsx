@@ -4,6 +4,7 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { Lock, Mail, Loader2, ShieldCheck } from "lucide-react";
+import MagicRings from '@/components/MagicRings';
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -42,9 +43,35 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4">
-      {/* Background Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
+    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4 overflow-hidden">
+      {/* Background Effect */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-50">
+        <div style={{ width: '1200px', height: '800px', position: 'relative' }}>
+          <MagicRings
+            color="#A855F7"
+            colorTwo="#6366F1"
+            ringCount={6}
+            speed={1}
+            attenuation={10}
+            lineThickness={2}
+            baseRadius={0.35}
+            radiusStep={0.1}
+            scaleRate={0.1}
+            opacity={1}
+            blur={0}
+            noiseAmount={0.1}
+            rotation={0}
+            ringGap={1.5}
+            fadeIn={0.7}
+            fadeOut={0.5}
+            followMouse={true}
+            mouseInfluence={0.2}
+            hoverScale={1.2}
+            parallax={0.05}
+            clickBurst={false}
+          />
+        </div>
+      </div>
 
       <div className="w-full max-w-md z-10">
         <div className="flex flex-col items-center mb-8 text-center">
