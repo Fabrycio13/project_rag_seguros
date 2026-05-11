@@ -31,7 +31,6 @@ interface Document {
   added: string;
   size: string;
   errorMessage?: string;
-  errorMessage?: string;
   source_uri?: string;
   is_active?: boolean;
   description?: string;
