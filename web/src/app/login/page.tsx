@@ -14,6 +14,15 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const router = useRouter();
 
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -50,21 +59,21 @@ export default function LoginPage() {
         <MagicRings
           color="#A855F7"
           colorTwo="#6366F1"
-          ringCount={6}
-          speed={1}
-          attenuation={6}
-          lineThickness={2}
-          baseRadius={0.35}
-          radiusStep={0.1}
-          scaleRate={0.1}
+          ringCount={isMobile ? 8 : 6}
+          speed={0.8}
+          attenuation={isMobile ? 8 : 6}
+          lineThickness={isMobile ? 1.5 : 2}
+          baseRadius={isMobile ? 0.2 : 0.35}
+          radiusStep={isMobile ? 0.15 : 0.1}
+          scaleRate={0.12}
           opacity={1}
           blur={0}
           noiseAmount={0.1}
-          rotation={25}
-          ringGap={1.5}
+          rotation={isMobile ? 90 : 25}
+          ringGap={isMobile ? 2.5 : 1.5}
           fadeIn={0.7}
           fadeOut={0.5}
-          followMouse={false}
+          followMouse={!isMobile}
           mouseInfluence={0.2}
           hoverScale={1.2}
           parallax={0.05}

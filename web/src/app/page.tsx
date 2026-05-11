@@ -62,6 +62,20 @@ const formatMessage = (text: string | React.ReactNode) => {
 
 export default function AppLayout() {
   const router = useRouter();
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileActiveTab, setMobileActiveTab] = useState<"list" | "chat">("list");
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      if (mobile) setIsSidebarOpen(false);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const [activeTab, setActiveTab] = useState<Tab>("documents");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
@@ -74,7 +88,7 @@ export default function AppLayout() {
   const [uploadDescription, setUploadDescription] = useState("");
   
   // Resizable Split View State
-  const [leftWidth, setLeftWidth] = useState(70);
+  const [leftWidth, setLeftWidth] = useState(isMobile ? 100 : 70);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const startResizing = useCallback((e: React.MouseEvent) => {
@@ -379,13 +393,24 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-zinc-950 text-zinc-100 font-sans overflow-hidden selection:bg-blue-500/30">
+    <div className="flex h-screen bg-zinc-950 text-zinc-100 font-sans overflow-hidden selection:bg-blue-500/30 relative">
+      {/* MOBILE OVERLAY */}
+      {isMobile && isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] transition-opacity duration-300"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
       
       {/* SIDEBAR */}
-      <aside className={`border-r border-zinc-800/60 bg-zinc-950 flex flex-col transition-all duration-300 ${isSidebarOpen ? "w-64" : "w-20"}`}>
+      <aside className={`
+        ${isMobile ? "fixed inset-y-0 left-0 z-[70] shadow-2xl" : "relative border-r border-zinc-800/60"}
+        bg-zinc-950 flex flex-col transition-all duration-300 
+        ${isSidebarOpen ? (isMobile ? "w-72" : "w-64") : (isMobile ? "-translate-x-full" : "w-20")}
+      `}>
         {/* Logo & Toggle */}
         <div className="p-5 border-b border-zinc-800/60 flex items-center justify-between">
-          {isSidebarOpen && (
+          {(isSidebarOpen || isMobile) && (
             <div className="flex-1 overflow-hidden mr-2 flex items-center">
               <img 
                 src="/logo_usabit_email.png" 
@@ -395,13 +420,24 @@ export default function AppLayout() {
             </div>
           )}
           
-          <button 
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className={`p-2 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors shrink-0 ${!isSidebarOpen && "mx-auto"}`}
-            title={isSidebarOpen ? "Recolher menu" : "Expandir menu"}
-          >
-            <Menu size={20} />
-          </button>
+          {!isMobile && (
+            <button 
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className={`p-2 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors shrink-0 ${!isSidebarOpen && "mx-auto"}`}
+              title={isSidebarOpen ? "Recolher menu" : "Expandir menu"}
+            >
+              <Menu size={20} />
+            </button>
+          )}
+
+          {isMobile && (
+            <button 
+              onClick={() => setIsSidebarOpen(false)}
+              className="p-2 rounded-lg text-zinc-400 hover:text-zinc-100 transition-colors"
+            >
+              <X size={20} />
+            </button>
+          )}
         </div>
 
         {/* Navigation */}
@@ -409,7 +445,7 @@ export default function AppLayout() {
           {isSidebarOpen && <div className="text-[11px] font-semibold text-zinc-500 tracking-wider mb-4 px-2">ESPAÇO DE TRABALHO</div>}
           <nav className="space-y-1.5">
             <button 
-              onClick={() => setActiveTab("dashboard")}
+              onClick={() => { setActiveTab("dashboard"); if(isMobile) setIsSidebarOpen(false); }}
               className={`w-full flex items-center ${isSidebarOpen ? "justify-start px-3 gap-3" : "justify-center px-0"} py-2.5 text-sm font-medium transition-all rounded-lg ${
                 activeTab === "dashboard" 
                 ? "bg-blue-600 text-white shadow-md shadow-blue-900/20" 
@@ -421,7 +457,7 @@ export default function AppLayout() {
               {isSidebarOpen && <span>Dashboard</span>}
             </button>
             <button 
-              onClick={() => setActiveTab("documents")}
+              onClick={() => { setActiveTab("documents"); if(isMobile) setIsSidebarOpen(false); }}
               className={`w-full flex items-center ${isSidebarOpen ? "justify-start px-3 gap-3" : "justify-center px-0"} py-2.5 text-sm font-medium transition-all rounded-lg ${
                 activeTab === "documents" 
                 ? "bg-blue-600 text-white shadow-md shadow-blue-900/20" 
@@ -435,7 +471,7 @@ export default function AppLayout() {
           </nav>
         </div>
 
-        <div className={`p-4 border-t border-zinc-800/60 flex flex-col gap-1 ${!isSidebarOpen && "items-center"}`}>
+        <div className={`p-4 border-t border-zinc-800/60 flex flex-col gap-1 ${!isSidebarOpen && !isMobile && "items-center"}`}>
           {/* User Profile */}
           {isSidebarOpen ? (
             <div className="flex items-center gap-3 p-2.5 mb-2 bg-zinc-900/50 hover:bg-zinc-900 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-zinc-800/80 w-full overflow-hidden">
@@ -446,7 +482,7 @@ export default function AppLayout() {
                 <div className="text-sm font-medium truncate">Usabit</div>
               </div>
             </div>
-          ) : (
+          ) : !isMobile && (
             <div className="w-9 h-9 mb-2 bg-zinc-800 flex items-center justify-center rounded-full shadow-sm shrink-0 cursor-pointer hover:bg-zinc-700 transition-colors" title="Usabit">
               <User size={18} className="text-zinc-400" />
             </div>
@@ -466,15 +502,32 @@ export default function AppLayout() {
           >
             <LogOut size={18} className="shrink-0" />
             {isSidebarOpen && <span>Sair</span>}
-          </button>
         </div>
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 flex overflow-hidden bg-zinc-950">
+      <main className="flex-1 flex flex-col overflow-hidden bg-zinc-950">
+        {/* MOBILE HEADER */}
+        {isMobile && (
+          <header className="h-16 border-b border-zinc-800/60 px-4 flex items-center justify-between bg-zinc-950 shrink-0">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 text-zinc-400 hover:text-zinc-100"
+            >
+              <Menu size={24} />
+            </button>
+            <img 
+              src="/logo_usabit_email.png" 
+              alt="Usabit Logo" 
+              className="h-7 w-auto object-contain"
+            />
+            <div className="w-10"></div> {/* Spacer */}
+          </header>
+        )}
+
         {activeTab === "dashboard" ? (
-          <div className="flex-1 flex items-center justify-center text-zinc-500">
-            <div className="text-center bg-zinc-900/30 p-12 rounded-3xl border border-zinc-800/50">
+          <div className="flex-1 flex items-center justify-center text-zinc-500 p-6">
+            <div className="text-center bg-zinc-900/30 p-8 md:p-12 rounded-3xl border border-zinc-800/50 w-full max-w-sm">
               <LayoutDashboard size={48} className="mx-auto mb-4 opacity-30 text-blue-400" />
               <h2 className="text-xl font-medium mb-2 text-zinc-300">Dashboard Vazio</h2>
               <p className="text-sm">Esta área está reservada para o futuro dashboard.</p>
@@ -482,196 +535,267 @@ export default function AppLayout() {
           </div>
         ) : (
           /* DOCUMENTS SPLIT VIEW */
-          <div className="flex-1 flex" ref={containerRef}>
+          <div className={`flex-1 flex ${isMobile ? "flex-col" : "flex-row"}`} ref={containerRef}>
             
+            {/* MOBILE TABS (only on mobile when in documents tab) */}
+            {isMobile && (
+              <div className="flex border-b border-zinc-800/60 bg-zinc-950 shrink-0">
+                <button 
+                  onClick={() => setMobileActiveTab("list")}
+                  className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${
+                    mobileActiveTab === "list" ? "border-blue-600 text-blue-500 bg-blue-600/5" : "border-transparent text-zinc-500"
+                  }`}
+                >
+                  Documentos
+                </button>
+                <button 
+                  onClick={() => setMobileActiveTab("chat")}
+                  className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${
+                    mobileActiveTab === "chat" ? "border-blue-600 text-blue-500 bg-blue-600/5" : "border-transparent text-zinc-500"
+                  }`}
+                >
+                  Chat IA
+                </button>
+              </div>
+            )}
+
             {/* LEFT PANE: UPLOAD & LIST */}
-            <div style={{ width: `${leftWidth}%` }} className="min-w-[400px] flex flex-col bg-zinc-950">
-              <div className="p-8 pb-4">
-                <h1 className="text-xl font-semibold mb-6">Upload Knowledge</h1>
+            <div 
+              style={{ width: isMobile ? "100%" : `${leftWidth}%` }} 
+              className={`${isMobile && mobileActiveTab !== "list" ? "hidden" : "flex"} min-w-[300px] flex-col bg-zinc-950 overflow-y-auto`}
+            >
+              <div className="p-4 md:p-8 pb-4">
+                <h1 className="text-lg md:text-xl font-semibold mb-4 md:mb-6">Upload Knowledge</h1>
                 
                 {/* Empty State / Upload trigger placeholder */}
                 <div 
                   onClick={handleUploadClick}
-                  className="border-2 border-dashed border-zinc-700/60 bg-zinc-900/30 hover:bg-zinc-900 hover:border-blue-500/50 transition-all duration-300 cursor-pointer p-10 flex flex-col items-center justify-center text-center group rounded-2xl relative overflow-hidden"
+                  className="border-2 border-dashed border-zinc-700/60 bg-zinc-900/30 hover:bg-zinc-900 hover:border-blue-500/50 transition-all duration-300 cursor-pointer p-6 md:p-10 flex flex-col items-center justify-center text-center group rounded-2xl relative overflow-hidden"
                 >
-                  <div className="w-14 h-14 bg-zinc-800 text-zinc-400 group-hover:text-blue-400 group-hover:bg-blue-500/10 transition-colors duration-300 flex items-center justify-center rounded-full mb-5 shadow-sm">
-                    <UploadCloud size={26} />
+                  <div className="w-12 h-12 md:w-14 md:h-14 bg-zinc-800 text-zinc-400 group-hover:text-blue-400 group-hover:bg-blue-500/10 transition-colors duration-300 flex items-center justify-center rounded-full mb-4 md:mb-5 shadow-sm">
+                    <UploadCloud size={24} />
                   </div>
-                  <div className="font-medium text-sm mb-2 text-zinc-200">Clique para adicionar documentos</div>
-                  <div className="text-[13px] text-zinc-500">Ou use o botão "Adicionar Novo" abaixo</div>
+                  <div className="font-medium text-xs md:text-sm mb-1 md:mb-2 text-zinc-200">Clique para adicionar documentos</div>
+                  <div className="text-[11px] md:text-[13px] text-zinc-500">Ou use o botão "Adicionar Novo"</div>
                 </div>
               </div>
 
-              <div className="flex-1 flex flex-col p-8 pt-4">
-                <div className="flex items-center justify-between mb-6">
+              <div className="flex-1 flex flex-col p-4 md:p-8 pt-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                   <div className="text-sm font-medium text-zinc-500 flex items-center gap-2">
                     Início <span className="text-zinc-700">&gt;</span> <span className="text-zinc-100">Base de Conhecimento</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button onClick={handleDeleteAll} className="flex items-center gap-2 bg-zinc-900 hover:bg-red-500/20 active:bg-red-500/30 text-red-400 border border-zinc-800 hover:border-red-500/30 text-sm font-medium px-4 py-2 rounded-lg transition-all shadow-sm">
-                      <Trash2 size={16} />
-                      Excluir Tudo
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleDeleteAll} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-zinc-900 hover:bg-red-500/20 active:bg-red-500/30 text-red-400 border border-zinc-800 hover:border-red-500/30 text-xs font-medium px-3 py-2 rounded-lg transition-all shadow-sm">
+                      <Trash2 size={14} />
+                      {isMobile ? "Excluir" : "Excluir Tudo"}
                     </button>
-                    <button onClick={handleUploadClick} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-all shadow-sm shadow-blue-900/20">
-                      <Plus size={16} />
-                      Adicionar Novo
+                    <button onClick={handleUploadClick} className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white text-xs font-medium px-3 py-2 rounded-lg transition-all shadow-sm shadow-blue-900/20">
+                      <Plus size={14} />
+                      {isMobile ? "Novo" : "Adicionar Novo"}
                     </button>
                   </div>
                 </div>
 
-                {/* Table */}
-                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                  <table className="w-full text-sm text-left">
-                    <thead className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider border-b border-zinc-800/60">
-                      <tr>
-                        <th className="pb-4">Nome do Arquivo</th>
-                        <th className="pb-4 w-28 text-center">Status</th>
-                        <th className="pb-4 w-28 text-center">Data</th>
-                        <th className="pb-4 w-24 text-center">Tamanho</th>
-                        <th className="pb-4 w-40 text-center">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-800/40">
-                      {documents.map(doc => (
-                        <tr key={doc.id} className={`hover:bg-zinc-900/40 transition-colors group ${!doc.is_active ? "opacity-50 grayscale" : ""}`}>
-                          <td className="py-4 w-2/5">
-                            <div className="flex items-center gap-3 pr-4">
-                              <div className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center transition-colors ${doc.is_active ? 'bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20' : 'bg-zinc-800 text-zinc-500'}`}>
-                                <FileText size={16} />
-                              </div>
-                              <span className={`font-medium break-words ${!doc.is_active ? 'text-zinc-500 line-through' : 'text-zinc-200'}`} title={doc.name}>{doc.name}</span>
+                {/* Mobile Documents List (Card version) or Desktop Table */}
+                {isMobile ? (
+                  <div className="space-y-3 pb-20">
+                    {documents.map(doc => (
+                      <div key={doc.id} className={`bg-zinc-900/50 border border-zinc-800/60 p-4 rounded-xl flex flex-col gap-3 ${!doc.is_active ? "opacity-50 grayscale" : ""}`}>
+                        <div className="flex items-start gap-3">
+                          <div className={`w-10 h-10 shrink-0 rounded-lg flex items-center justify-center bg-blue-500/10 text-blue-400`}>
+                            <FileText size={20} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-zinc-200 truncate" title={doc.name}>{doc.name}</h3>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] text-zinc-500 font-medium">{doc.added}</span>
+                              <span className="text-zinc-700 text-[10px]">•</span>
+                              <span className="text-[10px] text-zinc-500 font-medium">{doc.size}</span>
                             </div>
-                          </td>
-                          <td className="py-4 text-center">
+                          </div>
+                          <div className="shrink-0">
                             {doc.status === "Processado" ? (
-                              <span className="inline-flex items-center gap-1.5 border border-green-500/20 bg-green-500/10 text-green-400 text-[11px] font-bold px-2.5 py-1 rounded-full">
-                                Processado
-                              </span>
+                              <span className="bg-green-500/10 text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-500/20">OK</span>
                             ) : doc.status === "Processando" ? (
-                              <span className="inline-flex items-center gap-1.5 border border-yellow-500/20 bg-yellow-500/10 text-yellow-400 text-[11px] font-bold px-2.5 py-1 rounded-full animate-pulse">
-                                Processando
-                              </span>
+                              <div className="w-4 h-4 border-2 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin"></div>
                             ) : (
-                              <div className="relative flex items-center justify-center group/tooltip cursor-help">
-                                <span className="inline-flex items-center gap-1.5 border border-red-500/20 bg-red-500/10 text-red-400 text-[11px] font-bold px-2.5 py-1 rounded-full">
-                                  Recusado
-                                  <Info size={12} className="text-red-400/70" />
-                                </span>
-                                
-                                {/* Custom Premium Tooltip */}
-                                {doc.errorMessage && (
-                                  <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover/tooltip:block w-56 bg-zinc-800 text-zinc-200 text-xs p-3 rounded-lg shadow-xl border border-zinc-700/80 z-50 normal-case font-normal pointer-events-none text-left">
-                                    <div className="font-semibold text-red-400 mb-1">Erro de Processamento</div>
-                                    {doc.errorMessage}
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-px border-4 border-transparent border-b-zinc-700/80"></div>
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-1 border-4 border-transparent border-b-zinc-800"></div>
-                                  </div>
-                                )}
-                              </div>
+                              <AlertTriangle size={16} className="text-red-500" />
                             )}
-                          </td>
-                          <td className="py-4 text-zinc-400 text-center">{doc.added}</td>
-                          <td className="py-4 text-zinc-400 text-center">
-                            <span className="text-zinc-500 text-xs">{doc.size}</span>
-                          </td>
-                          <td className="py-4 text-zinc-400 text-center">
-                            <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              
-                              {/* Description Note Tooltip */}
-                              {doc.description && (
-                                <div className="relative group/note cursor-help flex items-center justify-center">
-                                  <div className="p-2 text-zinc-500 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors">
-                                    <MessageSquare size={16} />
-                                  </div>
-                                  <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 hidden group-hover/note:block w-56 bg-zinc-800 text-zinc-200 text-xs p-3 rounded-lg shadow-xl border border-zinc-700/80 z-50 normal-case font-normal pointer-events-none text-left">
-                                    <div className="font-semibold text-purple-400 mb-1">Nota</div>
-                                    {doc.description}
-                                    <div className="absolute left-full top-1/2 -translate-y-1/2 -ml-px border-4 border-transparent border-l-zinc-700/80"></div>
-                                    <div className="absolute left-full top-1/2 -translate-y-1/2 -ml-1 border-4 border-transparent border-l-zinc-800"></div>
-                                  </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between border-t border-zinc-800/40 pt-3">
+                           <div className="flex items-center gap-1">
+                              {doc.source_uri && (
+                                <a href={`https://lmoxcjndvhnxihtvnavs.supabase.co/storage/v1/object/public/documents/${doc.source_uri}`} target="_blank" className="p-2 text-zinc-400 hover:text-blue-400"><Eye size={18} /></a>
+                              )}
+                              <button onClick={() => handleToggleActive(doc.id, !!doc.is_active)} className="p-2 text-zinc-400"><Power size={18} /></button>
+                           </div>
+                           <div className="flex items-center gap-1">
+                              <button onClick={() => handleReprocess(doc.id)} className="p-2 text-zinc-400"><RefreshCw size={18} /></button>
+                              <button onClick={() => handleDeleteDocument(doc.id, doc.name)} className="p-2 text-red-400/70"><Trash2 size={18} /></button>
+                           </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                    <table className="w-full text-sm text-left">
+                      <thead className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider border-b border-zinc-800/60">
+                        <tr>
+                          <th className="pb-4">Nome do Arquivo</th>
+                          <th className="pb-4 w-28 text-center">Status</th>
+                          <th className="pb-4 w-28 text-center">Data</th>
+                          <th className="pb-4 w-24 text-center">Tamanho</th>
+                          <th className="pb-4 w-40 text-center">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-800/40">
+                        {documents.map(doc => (
+                          <tr key={doc.id} className={`hover:bg-zinc-900/40 transition-colors group ${!doc.is_active ? "opacity-50 grayscale" : ""}`}>
+                            <td className="py-4 w-2/5">
+                              <div className="flex items-center gap-3 pr-4">
+                                <div className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center transition-colors ${doc.is_active ? 'bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20' : 'bg-zinc-800 text-zinc-500'}`}>
+                                  <FileText size={16} />
+                                </div>
+                                <span className={`font-medium break-words ${!doc.is_active ? 'text-zinc-500 line-through' : 'text-zinc-200'}`} title={doc.name}>{doc.name}</span>
+                              </div>
+                            </td>
+                            <td className="py-4 text-center">
+                              {doc.status === "Processado" ? (
+                                <span className="inline-flex items-center gap-1.5 border border-green-500/20 bg-green-500/10 text-green-400 text-[11px] font-bold px-2.5 py-1 rounded-full">
+                                  Processado
+                                </span>
+                              ) : doc.status === "Processando" ? (
+                                <span className="inline-flex items-center gap-1.5 border border-yellow-500/20 bg-yellow-500/10 text-yellow-400 text-[11px] font-bold px-2.5 py-1 rounded-full animate-pulse">
+                                  Processando
+                                </span>
+                              ) : (
+                                <div className="relative flex items-center justify-center group/tooltip cursor-help">
+                                  <span className="inline-flex items-center gap-1.5 border border-red-500/20 bg-red-500/10 text-red-400 text-[11px] font-bold px-2.5 py-1 rounded-full">
+                                    Recusado
+                                    <Info size={12} className="text-red-400/70" />
+                                  </span>
+                                  
+                                  {/* Custom Premium Tooltip */}
+                                  {doc.errorMessage && (
+                                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 hidden group-hover/tooltip:block w-56 bg-zinc-800 text-zinc-200 text-xs p-3 rounded-lg shadow-xl border border-zinc-700/80 z-50 normal-case font-normal pointer-events-none text-left">
+                                      <div className="font-semibold text-red-400 mb-1">Erro de Processamento</div>
+                                      {doc.errorMessage}
+                                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-px border-4 border-transparent border-b-zinc-700/80"></div>
+                                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-1 border-4 border-transparent border-b-zinc-800"></div>
+                                    </div>
+                                  )}
                                 </div>
                               )}
-
-                              {/* Open Document */}
-                              {doc.source_uri && (
-                                <a
-                                  href={`https://lmoxcjndvhnxihtvnavs.supabase.co/storage/v1/object/public/documents/${doc.source_uri}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="p-2 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
-                                  title="Ver Arquivo Original"
-                                >
-                                  <Eye size={16} />
-                                </a>
-                              )}
-
-                              {/* Toggle Active */}
-                              {doc.status === "Processado" && (
+                            </td>
+                            <td className="py-4 text-zinc-400 text-center">{doc.added}</td>
+                            <td className="py-4 text-zinc-400 text-center">
+                              <span className="text-zinc-500 text-xs">{doc.size}</span>
+                            </td>
+                            <td className="py-4 text-zinc-400 text-center">
+                              <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                
+                                {/* Description Note Tooltip */}
+                                {doc.description && (
+                                  <div className="relative group/note cursor-help flex items-center justify-center">
+                                    <div className="p-2 text-zinc-500 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors">
+                                      <MessageSquare size={16} />
+                                    </div>
+                                    <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 hidden group-hover/note:block w-56 bg-zinc-800 text-zinc-200 text-xs p-3 rounded-lg shadow-xl border border-zinc-700/80 z-50 normal-case font-normal pointer-events-none text-left">
+                                      <div className="font-semibold text-purple-400 mb-1">Nota</div>
+                                      {doc.description}
+                                      <div className="absolute left-full top-1/2 -translate-y-1/2 -ml-px border-4 border-transparent border-l-zinc-700/80"></div>
+                                      <div className="absolute left-full top-1/2 -translate-y-1/2 -ml-1 border-4 border-transparent border-l-zinc-800"></div>
+                                    </div>
+                                  </div>
+                                )}
+  
+                                {/* Open Document */}
+                                {doc.source_uri && (
+                                  <a
+                                    href={`https://lmoxcjndvhnxihtvnavs.supabase.co/storage/v1/object/public/documents/${doc.source_uri}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-2 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
+                                    title="Ver Arquivo Original"
+                                  >
+                                    <Eye size={16} />
+                                  </a>
+                                )}
+  
+                                {/* Toggle Active */}
+                                {doc.status === "Processado" && (
+                                  <button
+                                    onClick={() => handleToggleActive(doc.id, !!doc.is_active)}
+                                    className={`p-2 rounded-lg transition-colors ${doc.is_active ? 'text-zinc-500 hover:text-yellow-400 hover:bg-yellow-500/10' : 'text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10'}`}
+                                    title={doc.is_active ? "Desativar na IA" : "Ativar na IA"}
+                                  >
+                                    <Power size={16} />
+                                  </button>
+                                )}
+  
+                                {/* Reprocess */}
+                                {(doc.status === "Recusado" || doc.status === "Processado") && (
+                                  <button
+                                    onClick={() => handleReprocess(doc.id)}
+                                    className="p-2 text-zinc-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                                    title="Reprocessar Embeddings"
+                                  >
+                                    <RefreshCw size={16} />
+                                  </button>
+                                )}
+  
+                                {/* Delete */}
                                 <button
-                                  onClick={() => handleToggleActive(doc.id, !!doc.is_active)}
-                                  className={`p-2 rounded-lg transition-colors ${doc.is_active ? 'text-zinc-500 hover:text-yellow-400 hover:bg-yellow-500/10' : 'text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10'}`}
-                                  title={doc.is_active ? "Desativar na IA" : "Ativar na IA"}
+                                  onClick={() => handleDeleteDocument(doc.id, doc.name)}
+                                  className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                  title="Excluir documento"
                                 >
-                                  <Power size={16} />
+                                  <Trash2 size={16} />
                                 </button>
-                              )}
-
-                              {/* Reprocess */}
-                              {(doc.status === "Recusado" || doc.status === "Processado") && (
-                                <button
-                                  onClick={() => handleReprocess(doc.id)}
-                                  className="p-2 text-zinc-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
-                                  title="Reprocessar Embeddings"
-                                >
-                                  <RefreshCw size={16} />
-                                </button>
-                              )}
-
-                              {/* Delete */}
-                              <button
-                                onClick={() => handleDeleteDocument(doc.id, doc.name)}
-                                className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                                title="Excluir documento"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+  
+            {/* RESIZABLE DIVIDER (Hidden on Mobile) */}
+            {!isMobile && (
+              <div 
+                onMouseDown={startResizing}
+                className="w-1 bg-zinc-800/60 hover:bg-blue-500/80 active:bg-blue-500 cursor-col-resize transition-colors z-10 shrink-0"
+                title="Arraste para redimensionar"
+              />
+            )}
+  
+            {/* RIGHT PANE: AI CHAT */}
+            <div 
+              style={{ width: isMobile ? "100%" : `${100 - leftWidth}%` }} 
+              className={`${isMobile && mobileActiveTab !== "chat" ? "hidden" : "flex"} flex-col bg-zinc-900/20 h-full overflow-hidden`}
+            >
+              {/* Chat Header */}
+              <div className="h-[60px] md:h-[76px] border-b border-zinc-800/60 px-4 md:px-8 flex items-center justify-between bg-zinc-950 shrink-0">
+                <div className="flex items-center gap-3 md:gap-4">
+                  <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-600/10 text-blue-500 flex items-center justify-center rounded-full shadow-sm border border-blue-500/20">
+                    <Bot size={18} className="md:size-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm md:text-base font-semibold text-zinc-100 leading-tight">Assistente de IA</h2>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <div className="w-1.5 h-1.5 bg-green-500 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                      <span className="text-[10px] text-green-400 font-medium tracking-wide">RAG Ativo</span>
+                    </div>
                 </div>
               </div>
             </div>
-
-            {/* RESIZABLE DIVIDER */}
-            <div 
-              onMouseDown={startResizing}
-              className="w-1 bg-zinc-800/60 hover:bg-blue-500/80 active:bg-blue-500 cursor-col-resize transition-colors z-10 shrink-0"
-              title="Arraste para redimensionar"
-            />
-
-            {/* RIGHT PANE: AI CHAT */}
-            <div style={{ width: `${100 - leftWidth}%` }} className="flex flex-col bg-zinc-900/20">
-              {/* Chat Header */}
-              <div className="h-[76px] border-b border-zinc-800/60 px-8 flex items-center justify-between bg-zinc-950">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-blue-600/10 text-blue-500 flex items-center justify-center rounded-full shadow-sm border border-blue-500/20">
-                    <Bot size={20} />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-semibold text-zinc-100">Assistente de IA</h2>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <div className="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-                      <span className="text-[11px] text-green-400 font-medium tracking-wide">RAG Ativo</span>
-                    </div>
-                  </div>
-                </div>
-                <button className="w-9 h-9 flex items-center justify-center rounded-full bg-zinc-900 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors border border-zinc-800">
-                  <Plus size={18} />
-                </button>
-              </div>
 
               {/* Chat Messages */}
               <div className="flex-1 overflow-y-auto p-8 space-y-6">
